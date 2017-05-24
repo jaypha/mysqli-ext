@@ -1,0 +1,9 @@
+{
+  "name": "jaypha/mysqli-ext",
+  "require": {
+    "php": "^5.0 || ^7.0"
+  },
+  "autoload" : {
+    "psr-4": { "Jaypha\\": "src/" }
+  }
+}
