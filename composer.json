@@ -1,5 +1,6 @@
 {
   "name": "jaypha/mysqli-ext",
+  "description": "Convenience extensions to mysqli",
   "require": {
     "php": "^5.0 || ^7.0"
   },

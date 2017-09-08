@@ -5,22 +5,25 @@
 
 namespace Jaypha;
 
-class MySQLiExt extends \mysqli
+trait MySQLiExtTrait
 {
-  function __construct($host, $user, $password = NULL, $database = NULL)
+  function q($query)
   {
-    parent::__construct($host, $user, $password, $database);
-    if ($this->connect_error)
-      throw new \Exception("MySQLiExt failed to connect to $host as $user: ($this->connect_errno) '$this->connect_error'");
+    $r = $this->query($query);
+
+    if ($r === false)
+      throw new \Exception("Query failed: ($this->errno) '$this->error'");
+    return $r;
   }
 
-  function query($query)
+  //-------------------------------------------------------------------------
+
+  function mq($query)
   {
-    $r = parent::query($query);
+    $r = $this->multi_query($query);
 
     if (!$r)
       throw new \Exception("Query failed: ($this->errno) '$this->error'");
-    return $r;
   }
 
   //-------------------------------------------------------------------------
@@ -29,6 +32,8 @@ class MySQLiExt extends \mysqli
   {
     if ($value === NULL)
       return 'null';
+
+    assert (!is_object($value));
 
     if (is_bool($value))
       return (int) $value;
@@ -40,6 +45,20 @@ class MySQLiExt extends \mysqli
     if (is_numeric($value))
       return $value;
 
+    // Create comma separated lists for arrays.
+    if (is_array($value))
+    {
+      $res = [];
+      foreach ($value as $v)
+      {
+        if (is_array($v))
+          $res[] = "(".$this->quote($v).")";
+        else
+          $res[] = $this->quote($v);
+      }
+      return implode(",",$res);
+    }
+
     return "'".$this->real_escape_string($value)."'";
   }
 
@@ -49,7 +68,7 @@ class MySQLiExt extends \mysqli
 
   function queryValue($query)
   {
-    $res = $this->query($query);
+    $res = $this->q($query);
     if (($row = $res->fetch_row()) != NULL)
       $value = $row[0];
     else
@@ -62,7 +81,7 @@ class MySQLiExt extends \mysqli
 
   function queryRow($query, $resultType = MYSQLI_ASSOC)
   {
-    $res = $this->query($query);
+    $res = $this->q($query);
     if ($res->num_rows == 0)
       $row = false;
     else
@@ -76,7 +95,7 @@ class MySQLiExt extends \mysqli
   function queryData($query, $idColumn=NULL, $resultType = MYSQLI_ASSOC)
   {
     $data = [];
-    $res = $this->query($query);
+    $res = $this->q($query);
     if ($idColumn == NULL)
       $data = $res->fetch_all($resultType);
     else while ($row = $res->fetch_array($resultType))
@@ -89,12 +108,19 @@ class MySQLiExt extends \mysqli
   }
 
   //-------------------------------------------------------------------------
+
+  function queryChunkedData($query, $limit = 1000, $resultType = MYSQLI_ASSOC)
+  {
+    return new MySQLiChunkedResult($this, $query, $limit, $resultType);
+  }
+
+  //-------------------------------------------------------------------------
   // If two fields are queried, the first is used as an index.
 
   function queryColumn($query)
   {
     $data = [];
-    $res = $this->query($query);
+    $res = $this->q($query);
     while ($row = $res->fetch_row())
     {
       if ($res->field_count == 1)
@@ -108,7 +134,7 @@ class MySQLiExt extends \mysqli
 
   //-------------------------------------------------------------------------
 
-  function insert($table, $columns, $values = NULL)
+  function insert($tableName, $columns, $values = NULL)
   {
     // Three possibilities
     // string[string] columns, null
@@ -121,47 +147,50 @@ class MySQLiExt extends \mysqli
       $columns = array_keys($columns);
     }
 
-    $query = "insert into $table (".implode(",",$columns).") values (";
+    $query = "insert into $tableName (".implode(",",$columns).") values ";
     if (!is_array($values[0]))
-    {
-      $query .= implode(",",array_map([$this,"quote"],$values));
-    }
+      $query .= "(".$this->quote($values).")";
     else
-    {
-      $query .= implode("),(",array_map(function($a){ return implode(",",array_map([$this,"quote"],$a));},$values));
-    }
-    $query .= ")";
+      $query .= $this->quote($values);
+//    {
+//      $query .= implode(",",array_map([$this,"quote"],$values));
+//    }
+//    else
+//    {
+//      $query .= implode("),(",array_map(function($a){ return implode(",",array_map([$this,"quote"],$a));},$values));
+//    }
 
-    $this->query($query);
+    $this->q($query);
     return $this->insert_id;
   }
 
   //-------------------------------------------------------------------------
 
-  function update($table, $values, $wheres)
+  function update($tableName, $values, $wheres)
   {
     assert(is_array($values));
     assert(is_array($wheres));
 
-    $v = $this->_make_clauses($values);
-    $w = $this->_make_clauses($wheres);
+    $v = $this->makeClauses($values);
+    $w = $this->makeClauses($wheres);
 
     $this->query
     (
-      "update $table set ".
+      "update $tableName set ".
       implode(",",$v).
       " where ".
       implode(" and ",$w)
     );
   }
 
-  function replace($table, $values)
+  //-------------------------------------------------------------------------
+
+  function replace(string $tableName, array $values)
   {
-    assert(is_array($values));
-    $v = $this->_make_clauses($values);
+    $v = $this->makeClauses($values);
     $this->query
     (
-      "replace `$table` set ".
+      "replace `$tableName` set ".
       implode(",",$v)
     );
     return $this->insert_id;
@@ -169,21 +198,18 @@ class MySQLiExt extends \mysqli
 
   //-------------------------------------------------------------------------
 
-  function insertUpdate($table, $values, $wheres)
+  function insertUpdate(string $tableName, array $values, array $wheres)
   {
-    assert(is_array($values));
-    assert(is_array($wheres));
+    $wClause = implode(" and ", $this->makeClauses($wheres));
 
-    $wClause = implode(" and ", $this->_make_clauses($wheres));
-
-    if ($this->queryValue("select count(*) from $table where $wClause") != 0)
+    if ($this->queryValue("select count(*) from $tableName where $wClause") != 0)
     {
       foreach ($values as $key => &$value)
         $v[] = "`$key`=".$this->quote($value);
 
       $this->query
       (
-        "update $table set ".
+        "update $tableName set ".
         implode(",",$v).
         " where $wClause"
       );
@@ -191,24 +217,24 @@ class MySQLiExt extends \mysqli
     }
     else
     {
-      return $this->insert($table, array_merge($values, $wheres));
+      return $this->insert($tableName, array_merge($values, $wheres));
     }
   }
 
   //-------------------------------------------------------------------------
 
-  function delete($table, $wheres)
+  function delete(string $tableName, $wheres)
   {
     if (is_int($wheres))
     {
       // 'wheres' is an ID value
-      $this->query("delete from $table where id=$wheres");
+      $this->q("delete from $tableName where id=$wheres");
     }
     else
     {
       assert(is_array($wheres));
-      $wClause = implode(" and ", $this->_make_clauses($wheres));
-      $this->query("delete from $table where $wClause");
+      $wClause = implode(" and ", $this->makeClauses($wheres));
+      $this->q("delete from $tableName where $wClause");
     }
 
     return $this->affected_rows;
@@ -217,39 +243,54 @@ class MySQLiExt extends \mysqli
   //-------------------------------------------------------------------------
   // CRUD style accessors that assume the existance of an "id" column
 
-  function get($table, int $id)
+  function get(string $tableName, int $id)
   {
-    return $this->queryRow("select * from $table where id=$id");
+    return $this->queryRow("select * from $tableName where id=$id");
   }
 
-  function set($table, $values, int $id = 0)
+  function set(string $tableName, array $values, int $id = 0)
   {
     if ($id)
-      $this->update($table, $values, [ "id" => $id ]);
+      $this->update($tableName, $values, [ "id" => $id ]);
     else
-      $id = $this->insert($table, $values);
+      $id = $this->insert($tableName, $values);
     return $id;
-  }
-
-  private function remove($table, int $id)
-  {
-    $this->query("delete from $table where id=$id");
-    return $this->affected_rows;
   }
 
   //----------------------------------------------------------------------------
 
-  protected function _make_clause($key, $value)
+  function makeClause($key, $value)
   {
-    return "`$key`=".$this->quote($value);
+    if ($value === NULL)
+      return "`$key` is NULL";
+    else if (is_array($value))
+      return "`$key` in (".$this->quote($value).")";
+    else
+      return "`$key`=".$this->quote($value);
   }
 
-  protected function _make_clauses(&$wheres)
+  //----------------------------------------------------------------------------
+
+  function makeClauses(array &$wheres)
   {
     $w = [];
     foreach ($wheres as $key => &$value)
-      $w[] = $this->_make_clause($key,$value);
+      $w[] = $this->makeClause($key,$value);
     return $w;
+  }
+}
+
+//----------------------------------------------------------------------------
+
+class MySQLiExt extends \mysqli
+{
+  use MySQLiExtTrait;
+
+  function __construct($host, $user, $password = NULL, $database = NULL)
+  {
+    parent::__construct($host, $user, $password, $database);
+    if ($this->connect_error)
+      throw new \Exception("MySQLiExt failed to connect to $host as $user: ($this->connect_errno) '$this->connect_error'");
   }
 }
 
