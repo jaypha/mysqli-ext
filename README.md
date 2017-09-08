@@ -61,18 +61,21 @@ $row = $db->queryRow("select * from sometable where id='2'");
 print_r($row);
 ```
 
-### `queryData($query, $resultType = MYSQLI_ASSOC)`
+### `queryData($query, $keyField = NULL, $resultType = MYSQLI_ASSOC)`
 
-Calls `q` with `$query` and returns the whole data set.
+Calls `q` with `$query` and returns the whole data set. If `$keyField` is set,
+then the values from this column are used as array keys.
 
 ```
 $data = $db->queryData("select * from sometable");  
-foreach ($data as $row)  
-  print_r($row);
+foreach ($data as $row) { ... }
 ```
-### `queryChunkedData($query, $limit = 1000, $resultType = MYSQLI_ASSOC)
 
-Returns a MySQLiChunkedResult instance.
+If a key is repeated, it will overwrite any existing value.
+
+### `queryChunkedData($query, $limit = 1000, $resultType = MYSQLI_ASSOC)`
+
+Returns a `MySQLiChunkedResult` instance.
 
 ### `queryColumn($query)`
 
@@ -147,7 +150,7 @@ the `$values` and `$wheres` combined.
 $db->insertUpdate("sometable", [ "name" => "john" ], [ "id" => 1 ]);
 ```
 
-### delete($tableName, $wheres)
+### `delete($tableName, $wheres)`
 
 Shortcut for delete. If `$where` is an integer, then it is matched to and id
 column
@@ -195,8 +198,8 @@ $db->remove("sometable", 1);
 If, for whetever reason, you cannot have an open query, but you also
 cannot load the whole query result into memory, then this class works
 as a compromise. The result is stored into a temporary table, and then
-read in chunks as separate queries. Implements Iterator so it can be
-used with foreach.
+read in chunks as separate queries. Implements `Iterator` so it can be
+used with `foreach`.
 
 ### Usage
 
@@ -206,7 +209,7 @@ $result = new MySQLiChunkedResult($mysql, $query, $limit);
 foreach ($result as $row) { ... }  
 
 $mysql = new MySQLiExt(...);  
-$result = $mydql->queryChunkedData($query, $limit);
+$result = $mysql->queryChunkedData($query, $limit);
 foreach ($result as $row) { ... }
 ```
 

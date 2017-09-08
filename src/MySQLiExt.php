@@ -92,16 +92,16 @@ trait MySQLiExtTrait
 
   //-------------------------------------------------------------------------
 
-  function queryData($query, $idColumn=NULL, $resultType = MYSQLI_ASSOC)
+  function queryData($query, $keyField=NULL, $resultType = MYSQLI_ASSOC)
   {
     $data = [];
     $res = $this->q($query);
-    if ($idColumn == NULL)
+    if ($keyField == NULL)
       $data = $res->fetch_all($resultType);
     else while ($row = $res->fetch_array($resultType))
     {
-      if ($idColumn)
-        $data[$row[$idColumn]] = $row;
+      if ($keyField)
+        $data[$row[$keyField]] = $row;
     }
     $res->close();
     return $data;
