@@ -259,6 +259,26 @@ trait MySQLiExtTrait
 
   //----------------------------------------------------------------------------
 
+  public function tableExists($tablename)
+  {
+    $fromdb = "";
+
+    if ($pos = strpos($tablename, "."))
+    {
+      $fromdb = "from `".substr($tablename, 0, $pos)."`";
+      $tablename = substr($tablename, $pos+1);
+    }
+
+    $query = "show tables $fromdb like ".$this->quote($tablename);
+    $result = $this->q($query);
+
+    $exists = mysqli_num_rows($result) != 0;
+    mysqli_free_result($result);
+    return $exists;
+  }
+
+  //----------------------------------------------------------------------------
+
   function makeClause($key, $value)
   {
     if ($value === NULL)

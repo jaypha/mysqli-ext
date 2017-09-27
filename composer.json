@@ -1,9 +1,16 @@
 {
   "name": "jaypha/mysqli-ext",
   "description": "Convenience extensions to mysqli",
+  "license" : "BSL-1.0",
   "require": {
     "php": "^5.0 || ^7.0"
   },
+  "authors": [
+    {
+      "name": "Jason den Dulk",
+      "role": "Developer"
+    }
+  ],
   "autoload" : {
     "psr-4": { "Jaypha\\": "src/" }
   }
