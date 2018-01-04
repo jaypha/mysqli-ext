@@ -171,10 +171,13 @@ trait MySQLiExtTrait
     assert(is_array($values));
     assert(is_array($wheres));
 
-    $v = $this->makeClauses($values);
+    $v = [];
+    foreach ($values as $key => &$value)
+      $v[] = "`$key`=".$this->quote($value);
+
     $w = $this->makeClauses($wheres);
 
-    $this->query
+    $this->q
     (
       "update $tableName set ".
       implode(",",$v).
@@ -188,7 +191,7 @@ trait MySQLiExtTrait
   function replace(string $tableName, array $values)
   {
     $v = $this->makeClauses($values);
-    $this->query
+    $this->q
     (
       "replace `$tableName` set ".
       implode(",",$v)
@@ -207,7 +210,7 @@ trait MySQLiExtTrait
       foreach ($values as $key => &$value)
         $v[] = "`$key`=".$this->quote($value);
 
-      $this->query
+      $this->q
       (
         "update $tableName set ".
         implode(",",$v).
@@ -275,6 +278,20 @@ trait MySQLiExtTrait
     $exists = mysqli_num_rows($result) != 0;
     mysqli_free_result($result);
     return $exists;
+  }
+
+  //----------------------------------------------------------------------------
+
+  function lockWrite($tablename)
+  {
+    $this->q("lock table $tablename write", __FUNCTION__);
+  }
+
+  //-------------------------------------------------------------------------
+
+  function unlock()
+  {
+    $this->q("unlock tables", __FUNCTION__);
   }
 
   //----------------------------------------------------------------------------

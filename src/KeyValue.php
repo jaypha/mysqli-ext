@@ -85,6 +85,20 @@ SSSS
     $this->connection->query("delete from $this->tablename");
     $this->cache = [];
   }
+
+  //-------------------------------------------------------------------------
+
+  function lockWrite()
+  {
+    $this->connection->query("lock table $this->tablename write", __FUNCTION__);
+  }
+
+  //-------------------------------------------------------------------------
+
+  function unlock()
+  {
+    $this->connection->query("unlock tables", __FUNCTION__);
+  }
   
   //-------------------------------------------------------------------------
 
