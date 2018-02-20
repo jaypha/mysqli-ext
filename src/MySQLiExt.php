@@ -228,7 +228,7 @@ trait MySQLiExtTrait
 
   function delete(string $tableName, $wheres)
   {
-    if (is_int($wheres))
+    if (is_int($wheres) || (is_string($wheres) && ctype_digit($wheres)))
     {
       // 'wheres' is an ID value
       $this->q("delete from $tableName where id=$wheres");
@@ -254,7 +254,15 @@ trait MySQLiExtTrait
   function set(string $tableName, array $values, int $id = 0)
   {
     if ($id)
-      $this->update($tableName, $values, [ "id" => $id ]);
+    {
+      if ($this->queryValue("select count(*) from $tableName where id=$id")==0)
+      {
+        $values["id"] = $id;
+        $this->insert($tableName, $values);
+      }
+      else
+        $this->update($tableName, $values, [ "id" => $id ]);
+    }
     else
       $id = $this->insert($tableName, $values);
     return $id;
@@ -301,7 +309,12 @@ trait MySQLiExtTrait
     if ($value === NULL)
       return "`$key` is NULL";
     else if (is_array($value))
-      return "`$key` in (".$this->quote($value).")";
+    {
+      if (count($value))
+        return "`$key` in (".$this->quote($value).")";
+      else
+        return "false";
+    }
     else
       return "`$key`=".$this->quote($value);
   }
