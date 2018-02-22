@@ -147,7 +147,7 @@ trait MySQLiExtTrait
       $columns = array_keys($columns);
     }
 
-    $query = "insert into $tableName (".implode(",",$columns).") values ";
+    $query = "insert into $tableName (`".implode("`,`",$columns)."`) values ";
     if (!is_array($values[0]))
       $query .= "(".$this->quote($values).")";
     else
