@@ -226,9 +226,13 @@ trait MySQLiExtTrait
 
   //-------------------------------------------------------------------------
 
-  function delete(string $tableName, $wheres)
+  function delete(string $tableName, $wheres = null)
   {
-    if (is_int($wheres) || (is_string($wheres) && ctype_digit($wheres)))
+    if ($wheres === null)
+    {
+      $this->q("truncate $tableName");
+    }
+    else if (is_int($wheres) || (is_string($wheres) && ctype_digit($wheres)))
     {
       // 'wheres' is an ID value
       $this->q("delete from $tableName where id=$wheres");

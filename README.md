@@ -47,6 +47,9 @@ Same as mysqli::multi_query, but throws an exception upon error.
 Calls `q` with `$query` and returns a single value. The first value of
 the first row.
 
+Returns a string if a  value is found and not null, NULL if the value was
+null, or false if no row was found
+
 ```
 $n = $db->queryValue("select name from sometable where id='2'");  
 echo "name is $n";
@@ -55,6 +58,9 @@ echo "name is $n";
 ### `queryRow($query, $resultType = MYSQLI_ASSOC)`
 
 Calls `q` with `$query` and returns the first row.
+
+Returns an array if a row was found. If result type is MYSQLI_ASSOC, it will be
+an associative array. Returns false if no row was found
 
 ```
 $row = $db->queryRow("select * from sometable where id='2'");  
@@ -65,6 +71,12 @@ print_r($row);
 
 Calls `q` with `$query` and returns the whole data set. If `$keyField` is set,
 then the values from this column are used as array keys.
+
+Returns an array of rows. Each row is an array. If resultType is MYSQLI_ASSOC, it will be
+an associative array.
+
+If now rows were found, returns an empty array.
+
 
 ```
 $data = $db->queryData("select * from sometable");  
@@ -79,11 +91,15 @@ Returns a `MySQLiChunkedResult` instance.
 
 ### `queryColumn($query)`
 
-Calls `q` with `$query` and returns a single column. If the SQL selects
+Calls `q` with `$query` and returns a single column. If the SQL query selects
 one field, then `queryColumn` returns an array containing the values. If the
-SQL selects two or more, then an associative array is returned with the
+query selects two or more, then an associative array is returned with the
 contents of the first column as the keys and the contents of the second
 columns as the values.
+
+If no rows were found, returns an empty array.
+
+If a key is repeated, it will overwrite any existing value.
 
 ```
 $column = $db->queryColumn("select name from sometable");  
@@ -93,7 +109,6 @@ $assoc = $db->queryColumn("select id,name from sometable");
 print_r($assoc);
 ```
 
-If a key is repeated, it will overwrite any existing value.
 
 ### `insert($tableName, $columns, $values = NULL)`
 
@@ -144,16 +159,20 @@ Will either insert or update. If a row mathcing the given `$wheres` exists, then
 it will be updated with the new `$values`. Otherwise a new row is inserted with
 the `$values` and `$wheres` combined.
 
+Use this instead of replace when you do not want to destory existing rows.
+
 ```
 // update into sometable set name='john' where id=1 (if exists)  
 // insert into sometable set name='john', id=1 (if not exists)  
 $db->insertUpdate("sometable", [ "name" => "john" ], [ "id" => 1 ]);
 ```
 
-### `delete($tableName, $wheres)`
+### `delete($tableName, $wheres = null)`
 
-Shortcut for delete. If `$where` is an integer, then it is matched to and id
-column
+Shortcut for delete. If `$where` is an integer, then it is matched to an `id`
+column.
+
+If `$wheres` is null, then it will truncate the table.
 
 ```
 // delete from sometable where name='john'
@@ -183,14 +202,6 @@ Returns the row's id.
 ```
 $db->set("sometable", [ "name" => "john" ], 1);  
 $id = $db->set("sometable", [ "name" => "jane" ]);
-```
-
-### `remove($tableName, $id)`
-
-Deletes row `id` from the table. A column called 'id' must exist.
-
-```
-$db->remove("sometable", 1);
 ```
 
 ## MySQLiChunkedResult
