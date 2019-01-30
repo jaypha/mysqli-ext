@@ -26,8 +26,8 @@ class MySQLiExtTest extends TestCase
 
   function setUp()
   {
-    self::$mysqli->query("drop table  if exists `".self::tableName."`");
-    self::$mysqli->query(self::tableDef);
+    self::$mysqli->q("drop table  if exists `".self::tableName."`");
+    self::$mysqli->q(self::tableDef);
   }
 
   function testQuoting()
@@ -335,9 +335,15 @@ class MySQLiExtTest extends TestCase
     ]);
   }
 
+  function testBadQuery()
+  {
+    $this->expectException(\LogicException::class);
+    self::$mysqli->q("select class from ".self::tableName);
+  }
+
   public static function tearDownAfterClass()
   {
-    self::$mysqli->query("drop table  if exists `".self::tableName."`");
+    self::$mysqli->q("drop table  if exists `".self::tableName."`");
     self::$mysqli->close();
   }
 }

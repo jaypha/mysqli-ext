@@ -18,6 +18,8 @@ class MySQLiChunkedResult implements \Iterator, \Countable
   private $mysql, $query, $count = null;
   private $offset, $idx, $limit;
   private $tableName, $data, $resultType;
+
+  public $asColumn = false;
   
   //-------------------------------------------------------
 
@@ -61,11 +63,11 @@ class MySQLiChunkedResult implements \Iterator, \Countable
     {
       $this->offset += $this->limit;
       $this->idx = 0;
-      $this->data = $this->mysql->queryData(
-        "select * from $this->tableName limit $this->limit offset $this->offset",
-        null,
-        $this->resultType
-      );
+      $sql = "select * from $this->tableName limit $this->limit offset $this->offset";
+      if ($this->asColumn)
+        $this->data = $this->mysql->queryColumn($sql);
+      else
+        $this->data = $this->mysql->queryData($sql, null, $this->resultType);
       assert(count($this->data) <= $this->limit);
     }      
   }
@@ -83,11 +85,11 @@ class MySQLiChunkedResult implements \Iterator, \Countable
     $this->count = $this->mysql->queryValue(
       "select count(*) from $this->tableName"
     );
-    $this->data = $this->mysql->queryData(
-      "select * from $this->tableName limit $this->limit",
-      null,
-      $this->resultType
-    );
+    $sql = "select * from $this->tableName limit $this->limit";
+    if ($this->asColumn)
+      $this->data = $this->mysql->queryColumn($sql);
+    else
+      $this->data = $this->mysql->queryData($sql,null, $this->resultType);
   }
 
   //-------------------------------------------------------

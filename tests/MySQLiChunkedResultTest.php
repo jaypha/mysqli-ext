@@ -109,6 +109,18 @@ class MySQLiChunkedResultTest extends TestCase
     $this->assertFalse($result->valid());
   }
 
+  function testChunkedColumn()
+  {
+    $result = self::$mysqli->queryChunkedColumn("select name from ".self::tableName, 3);
+    $this->assertEquals(count($result), count(self::tableData));
+    $i = 0;
+    foreach ($result as $row)
+    {
+      $expected = self::tableData[$i++][0];
+      $this->assertEquals($row, $expected);
+    }
+  }
+
   public static function tearDownAfterClass()
   {
     self::$mysqli->query("drop table  if exists `".self::tableName."`");

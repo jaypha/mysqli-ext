@@ -12,7 +12,7 @@ trait MySQLiExtTrait
     $r = $this->query($query);
 
     if ($r === false)
-      throw new \Exception("Query failed: ($this->errno) '$this->error'");
+      throw new \LogicException("Query failed: ($this->errno) '$this->error'");
     return $r;
   }
 
@@ -23,7 +23,7 @@ trait MySQLiExtTrait
     $r = $this->multi_query($query);
 
     if (!$r)
-      throw new \Exception("Query failed: ($this->errno) '$this->error'");
+      throw new \LogicException("Query failed: ($this->errno) '$this->error'");
   }
 
   //-------------------------------------------------------------------------
@@ -112,6 +112,13 @@ trait MySQLiExtTrait
   function queryChunkedData($query, $limit = 1000, $resultType = MYSQLI_ASSOC)
   {
     return new MySQLiChunkedResult($this, $query, $limit, $resultType);
+  }
+
+  function queryChunkedColumn($query, $limit = 1000)
+  {
+    $r = new MySQLiChunkedResult($this, $query, $limit);
+    $r->asColumn = true;
+    return $r;
   }
 
   //-------------------------------------------------------------------------
@@ -340,11 +347,23 @@ class MySQLiExt extends \mysqli
 {
   use MySQLiExtTrait;
 
-  function __construct($host, $user, $password = NULL, $database = NULL)
+  function __construct($host = null, $username = null, $password = null, $dbname = null)
   {
-    parent::__construct($host, $user, $password, $database);
+    if ($host != null)
+    {
+      @parent::__construct($host, $username, $password, $dbname);
+      if ($this->connect_error)
+        throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
+    }
+    else
+      parent::init();
+  }
+
+  function real_connect($host = null, $username = null, $password = null, $dbname = null, $port = null, $socket = null, $flag = null)
+  {
+    @parent::real_connect($host,$username,$password,$dbname,$port,$socket,$flag);
     if ($this->connect_error)
-      throw new \Exception("MySQLiExt failed to connect to $host as $user: ($this->connect_errno) '$this->connect_error'");
+      throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
   }
 }
 
