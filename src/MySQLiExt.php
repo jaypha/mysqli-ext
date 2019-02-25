@@ -30,7 +30,7 @@ trait MySQLiExtTrait
 
   function quote($value)
   {
-    if ($value === NULL)
+    if ($value === null)
       return 'null';
 
     assert (!is_object($value));
@@ -69,7 +69,7 @@ trait MySQLiExtTrait
   function queryValue($query)
   {
     $res = $this->q($query);
-    if (($row = $res->fetch_row()) != NULL)
+    if (($row = $res->fetch_row()) != null)
       $value = $row[0];
     else
       $value = false;
@@ -92,11 +92,11 @@ trait MySQLiExtTrait
 
   //-------------------------------------------------------------------------
 
-  function queryData($query, $keyField=NULL, $resultType = MYSQLI_ASSOC)
+  function queryData($query, $keyField=null, $resultType = MYSQLI_ASSOC)
   {
     $data = [];
     $res = $this->q($query);
-    if ($keyField == NULL)
+    if ($keyField == null)
       $data = $res->fetch_all($resultType);
     else while ($row = $res->fetch_array($resultType))
     {
@@ -141,14 +141,14 @@ trait MySQLiExtTrait
 
   //-------------------------------------------------------------------------
 
-  function insert($tableName, $columns, $values = NULL)
+  function insert($tableName, $columns, $values = null)
   {
     // Three possibilities
     // string[string] columns, null
     // string[] columns, string[] values
     // string[] columns, string[][] values
 
-    if ($values === NULL)
+    if ($values === null)
     {
       $values = array_values($columns);
       $columns = array_keys($columns);
@@ -214,16 +214,20 @@ trait MySQLiExtTrait
 
     if ($this->queryValue("select count(*) from $tableName where $wClause") != 0)
     {
-      foreach ($values as $key => &$value)
-        $v[] = "`$key`=".$this->quote($value);
+      if (count($values))
+      {
+        $v = [];
+        foreach ($values as $key => &$value)
+          $v[] = "`$key`=".$this->quote($value);
 
-      $this->q
-      (
-        "update $tableName set ".
-        implode(",",$v).
-        " where $wClause"
-      );
-      return 0;
+        $this->q
+        (
+          "update $tableName set ".
+          implode(",",$v).
+          " where $wClause"
+        );
+      }
+      return null;
     }
     else
     {
@@ -317,7 +321,7 @@ trait MySQLiExtTrait
 
   function makeClause($key, $value)
   {
-    if ($value === NULL)
+    if ($value === null)
       return "`$key` is NULL";
     else if (is_array($value))
     {
@@ -347,11 +351,11 @@ class MySQLiExt extends \mysqli
 {
   use MySQLiExtTrait;
 
-  function __construct($host = null, $username = null, $password = null, $dbname = null)
+  function __construct($host = null, $username = null, $password = null, $database = null)
   {
     if ($host != null)
     {
-      @parent::__construct($host, $username, $password, $dbname);
+      parent::__construct($host, $username, $password, $database);
       if ($this->connect_error)
         throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
     }
@@ -359,13 +363,14 @@ class MySQLiExt extends \mysqli
       parent::init();
   }
 
-  function real_connect($host = null, $username = null, $password = null, $dbname = null, $port = null, $socket = null, $flag = null)
+  function real_connect($host = null, $username = null, $password = null, $database = null, $port = null, $socket = null, $flag = null)
   {
-    @parent::real_connect($host,$username,$password,$dbname,$port,$socket,$flag);
+    parent::real_connect($host,$username,$password,$database,$port,$socket,$flag);
     if ($this->connect_error)
       throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
   }
 }
+
 
 //----------------------------------------------------------------------------
 // Copyright (C) 2017 Jaypha.
