@@ -355,7 +355,7 @@ class MySQLiExt extends \mysqli
   {
     if ($host != null)
     {
-      parent::__construct($host, $username, $password, $database);
+      @parent::__construct($host, $username, $password, $database);
       if ($this->connect_error)
         throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
     }
@@ -365,7 +365,7 @@ class MySQLiExt extends \mysqli
 
   function real_connect($host = null, $username = null, $password = null, $database = null, $port = null, $socket = null, $flag = null)
   {
-    parent::real_connect($host,$username,$password,$database,$port,$socket,$flag);
+    @parent::real_connect($host,$username,$password,$database,$port,$socket,$flag);
     if ($this->connect_error)
       throw new \RuntimeException("MySQLiExt failed to connect to $host as $username: ($this->connect_errno) '$this->connect_error'");
   }
