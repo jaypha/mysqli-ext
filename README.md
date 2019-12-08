@@ -204,6 +204,18 @@ $db->set("sometable", [ "name" => "john" ], 1);
 $id = $db->set("sometable", [ "name" => "jane" ]);
 ```
 
+### `quote($value)`
+
+Escapes and quotes a values according to the following rules:
+- a null value returns the string "null"
+- a DateTimeInterface value returns a quoted string formatted as "Y-m-d H:i:s",
+  compatible with all date and time fields.
+- numbers are returned as numbers.
+- strings containing numbers are returned as numbers unless they start with '0'.
+- other strings are escaped and quoted.
+- arrays are returned as a comma separated string of quoted values.
+- arrays within arrays are bracketed.
+
 ## MySQLiChunkedResult
 
 If, for whetever reason, you cannot have an open query, but you also

@@ -5,6 +5,8 @@
 
 namespace Jaypha;
 
+const MYSQL_DATETIME_FORMAT = "Y-m-d H:i:s";
+
 trait MySQLiExtTrait
 {
   function q($query)
@@ -12,7 +14,7 @@ trait MySQLiExtTrait
     $r = $this->query($query);
 
     if ($r === false)
-      throw new \LogicException("Query failed: ($this->errno) '$this->error'");
+      throw new \LogicException("Query failed: ($this->errno) '$this->error'\nQuery: $query");
     return $r;
   }
 
@@ -23,7 +25,7 @@ trait MySQLiExtTrait
     $r = $this->multi_query($query);
 
     if (!$r)
-      throw new \LogicException("Query failed: ($this->errno) '$this->error'");
+      throw new \LogicException("Query failed: ($this->errno) '$this->error'\nQuery: $query");
   }
 
   //-------------------------------------------------------------------------
@@ -32,6 +34,10 @@ trait MySQLiExtTrait
   {
     if ($value === null)
       return 'null';
+
+    // Note that this does not take into account timezone differences.
+    if ($value instanceof \DateTimeInterface)
+      return "'".$value->format(MYSQL_DATETIME_FORMAT)."'";
 
     assert (!is_object($value));
 
